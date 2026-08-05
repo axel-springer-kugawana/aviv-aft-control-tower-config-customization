@@ -9,7 +9,7 @@ Parameters:
   AccountSelectionMode:
     Description: Account selection mode - EXCLUSION (processes all accounts except those in ExcludedAccounts) or INCLUSION (processes only accounts in IncludedAccounts). Default is EXCLUSION for backward compatibility.
     Type: String
-    Default: EXCLUSION
+    Default: INCLUSION
     AllowedValues:
       - EXCLUSION
       - INCLUSION
@@ -24,7 +24,7 @@ Parameters:
   IncludedAccounts:
     Description: List of AWS account IDs to include when AccountSelectionMode is INCLUSION. Only used when AccountSelectionMode is INCLUSION.
     Type: String
-    Default: "['111111111111', '222222222222', '333333333333']"
+    Default: "['094388275486', '864613505566']"
     MinLength: 2
     MaxLength: 4096
 
@@ -66,7 +66,7 @@ Parameters:
 
   SourceS3Bucket:
     Type: String
-    Default: marketplace-sa-resources
+    Default: aviv-aft-control-tower-config-customization
     Description: S3 bucket containing the Lambda deployment packages, leave it default unless you have customized code.
 
 Metadata:
