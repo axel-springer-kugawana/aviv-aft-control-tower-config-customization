@@ -24,13 +24,13 @@ Parameters:
   IncludedAccounts:
     Description: List of AWS account IDs to include when AccountSelectionMode is INCLUSION. Only used when AccountSelectionMode is INCLUSION.
     Type: String
-    Default: "['094388275486', '864613505566']"
+    Default: "['094388275486', '864613505566', '535002848499', '061039786117', '961156486339', '365827924862', '891377034316', '897722661710', '851725188848', '767397846114', '388449571037', '058264322962', '339712945754']"
     MinLength: 2
     MaxLength: 4096
 
   ConfigRecorderStrategy:
-    Default: EXCLUSION
-    Description: Config Recorder Strategy
+    Default: INCLUSION
+    Description: Config Recorder Strategy. INCLUSION records only ConfigRecorderIncludedResourceTypes. Unrelated to AccountSelectionMode, which selects accounts.
     Type: String
     AllowedValues:
       - EXCLUSION
@@ -42,18 +42,18 @@ Parameters:
     Type: String
 
   ConfigRecorderIncludedResourceTypes:
-    Description: List of all resource types to be included in Config Recorder if you pick INCLUSION strategy
-    Default: "AWS::S3::Bucket,AWS::CloudTrail::Trail"
+    Description: Regional resource types to record when ConfigRecorderStrategy is INCLUSION. Global types belong in ConfigRecorderDailyGlobalResourceTypes so they are only recorded in the home region, avoiding duplicate configuration items across regions.
+    Default: "AWS::S3::Bucket,AWS::EC2::Instance,AWS::Lambda::Function,AWS::SQS::Queue,AWS::ApiGateway::RestApi,AWS::RDS::DBInstance,AWS::EC2::EIP,AWS::RDS::DBCluster,AWS::SecretsManager::Secret,AWS::DynamoDB::Table,AWS::ACM::Certificate,AWS::ElasticLoadBalancingV2::LoadBalancer,AWS::SNS::Topic,AWS::OpenSearch::Domain,AWS::KMS::Key,AWS::ECS::Cluster,AWS::WAFv2::IPSet,AWS::CodeDeploy::Application,AWS::SageMaker::Model,AWS::ApiGatewayV2::Stage,AWS::ApiGatewayV2::Api,AWS::Kinesis::Stream,AWS::EC2::VPNConnection,AWS::EC2::NetworkAcl,AWS::RDS::DBSubnetGroup,AWS::EFS::FileSystem,AWS::GuardDuty::Detector,AWS::EC2::FlowLog"
     Type: String
 
   ConfigRecorderDailyResourceTypes:
-    Description: List of all resource types to be set to a daily cadence
-    Default: "AWS::AutoScaling::AutoScalingGroup,AWS::AutoScaling::LaunchConfiguration"
+    Description: Resource types recorded on a daily cadence instead of continuously. In INCLUSION strategy these are automatically added to the recorded list, so only list types you actually want recorded.
+    Default: "AWS::AutoScaling::AutoScalingGroup"
     Type: String
 
   ConfigRecorderDailyGlobalResourceTypes:
-    Description: List of Global resource types to be set to a daily cadence in the AWS Control Tower home region. Append to this list as needed.
-    Default: "AWS::IAM::Policy,AWS::IAM::User,AWS::IAM::Role,AWS::IAM::Group"
+    Description: Global resource types, recorded on a daily cadence and only in the AWS Control Tower home region. In INCLUSION strategy these are automatically added to the recorded list, so only list types you actually want recorded.
+    Default: "AWS::IAM::Policy,AWS::IAM::User,AWS::IAM::Group,AWS::IAM::SAMLProvider,AWS::Route53::HostedZone,AWS::CloudFront::Distribution"
     Type: String
 
   ConfigRecorderDefaultRecordingFrequency:
