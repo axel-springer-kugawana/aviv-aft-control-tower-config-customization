@@ -3,6 +3,47 @@ This github repository is part of AWS blog post https://aws.amazon.com/blogs/mt/
 
 Please refer to the blog for what this sample code does and how to use it.
 
+## Deploying Multiple Environments
+
+This solution can be deployed as several **independent CloudFormation stacks** from the same `template.yaml` and the same Lambda code, one per environment (for example `dev`, `preview`). Each stack gets its own Producer/Consumer Lambdas, IAM roles, SQS queue, and EventBridge rule — CloudFormation auto-generates unique physical names for all of them (none are hardcoded in the template), so stacks never collide with one another. The only thing that differs between environments is the parameter values, in particular `IncludedAccounts`.
+
+This pattern exists because a single CloudFormation parameter value is hard-capped by AWS at 4096 bytes (see [Understand CloudFormation quotas](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/cloudformation-limits.html)), which isn't enough to list every account across multiple environments in one `IncludedAccounts` parameter. Splitting environments into separate stacks, each with its own smaller account list, avoids that limit entirely without touching the Lambda code.
+
+### The `configs/` directory
+
+Each environment has a parameter file at `configs/<environment>.json`, in the native AWS CloudFormation parameters format:
+
+```json
+[
+  { "ParameterKey": "AccountSelectionMode", "ParameterValue": "INCLUSION" },
+  { "ParameterKey": "IncludedAccounts", "ParameterValue": "['123456789012', '234567890123']" },
+  ...
+]
+```
+
+Every parameter from `template.yaml` is pinned explicitly in each file, even when the value is identical across environments. This decouples what's actually deployed from the template's `Default` values: if someone changes a `Default` in `template.yaml` later, already-deployed stacks won't silently pick up the new value on their next update — only editing the relevant `configs/<environment>.json` file changes what gets deployed.
+
+Because the files are in the native AWS CLI format, they also work directly without `deploy.sh`, e.g. with `aws cloudformation create-stack --parameters file://configs/preview.json ...`.
+
+### `deploy.sh`
+
+```
+./deploy.sh <environment>
+```
+
+This creates or updates the CloudFormation stack for that environment, using `template.yaml` and `configs/<environment>.json`. It maps each environment name to its stack name internally:
+
+| Environment | Stack name |
+|---|---|
+| `dev` | `aviv-aft-ct-cfg-customization` |
+| `preview` | `aviv-aft-ct-cfg-customization-preview` |
+
+The script detects whether the stack already exists (`update-stack`) or not (`create-stack`), prints the exact AWS CLI command it's about to run, and asks for confirmation before doing anything.
+
+**Adding a new environment**: create `configs/<environment>.json` (copy an existing one and adjust `IncludedAccounts`), then add a `[<environment>]="<stack-name>"` entry to the `STACK_NAMES` map at the top of `deploy.sh`.
+
+**Note for `dev`**: `configs/dev.json` was reconstructed from `template.yaml`'s current `Default` values, not read back from the live stack's actual deployed parameters. Before ever running `./deploy.sh dev` against the existing production stack, verify there's no drift with `aws cloudformation describe-stacks --stack-name aviv-aft-ct-cfg-customization --query 'Stacks[0].Parameters'`.
+
 ## CloudFormation Parameters
 
 This solution uses CloudFormation parameters to customize the AWS Config Recorder behavior across your Control Tower environment. Parameters are organized into four categories:
@@ -236,6 +277,10 @@ See [CONTRIBUTING](CONTRIBUTING.md#security-issue-notifications) for more inform
 
 
 ## Known limitations
+
+### EventBridge Rule Naming
+
+The `ProducerEventTrigger` EventBridge rule does not set an explicit `Name` and relies on CloudFormation's auto-generated name, like every other resource in this template. Do not set one: EventBridge rule names are capped at 64 characters, and a name derived from the stack name (for example `<stack-name>-SQSConfigRecorder-<suffix>`, as this rule's name used to be) can silently exceed that limit once the stack name gets a bit long (this happened when deploying a stack named `aviv-aft-ct-cfg-customization-preview`, while the shorter `aviv-aft-ct-cfg-customization` stayed just under the limit).
 
 ### Resource Retention After Stack Deletion
 
